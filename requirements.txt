@@ -2,7 +2,7 @@ pip==23.3.2
 python-dotenv
 langchain
 openai
-pinecone-client
+pinecone-client==2.1.0
 unstructured
 tabulate
 pdf2image
