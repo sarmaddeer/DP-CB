@@ -1,6 +1,6 @@
 streamlit==1.17.0
 pandas==1.5.2
-openai==0.28.3
+openai
 regex==2023.11.18
 PyPDF2==2.3.2
 langchain==0.12.7
