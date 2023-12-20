@@ -9,3 +9,4 @@ pinecone-client
 python-dotenv
 langchain-experimental
 faiss-cpu
+streamlit-chat
