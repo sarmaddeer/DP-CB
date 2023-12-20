@@ -22,7 +22,7 @@ PyPDF2
 streamlit
 pandas
 openai
-re
+regex
 PyPDF2
 langchain
 pathlib
