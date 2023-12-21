@@ -10,3 +10,4 @@ python-dotenv
 langchain-experimental
 faiss-cpu
 streamlit-chat
+tiktoken
