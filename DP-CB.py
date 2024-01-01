@@ -6,12 +6,11 @@ import re
 import os
 import pickle
 from pathlib import Path
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.text_splitter import RecursiveCharacterTextSplitter, CharacterTextSplitter
 from PyPDF2 import PdfReader
 from langchain.sql_database import SQLDatabase
 from langchain.agents.agent_types import AgentType
 from langchain.agents.agent_toolkits import SQLDatabaseToolkit
-from langchain.callbacks import StreamlitCallbackHandler
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.chains.conversation.memory import ConversationBufferWindowMemory
 from langchain.vectorstores import FAISS
@@ -19,7 +18,9 @@ from langchain.chains.question_answering import load_qa_chain
 from langchain.chat_models import ChatOpenAI
 from langchain.callbacks import get_openai_callback
 from streamlit_chat import message
-from langchain.prompts import SystemMessagePromptTemplate
+from langchain.embeddings import CacheBackedEmbeddings
+from langchain.storage import LocalFileStore
+from InstructorEmbedding import INSTRUCTOR
 from langchain.agents import create_sql_agent
 import pinecone
 from dotenv import load_dotenv
@@ -46,8 +47,12 @@ if 'buffer_memory' not in st.session_state:
             st.session_state.buffer_memory=ConversationBufferWindowMemory(k=3,return_messages=True)
 memory = st.session_state.buffer_memory
 
-if st.sidebar.button('Project Management'):
-    st.session_state['NLP-SQL'] = 'Jane Doe'
+if st.button("Clear message history"):
+    st.session_state['responses'] = ["How can I assist you? You can ask me about the task nomenclature or even the HR policies"]
+
+
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
 #prompts
 delimiter = '####'
@@ -134,6 +139,12 @@ Your job is the give your response in bullet format and to always quote numerica
 
 """
 
+# Add a dictionary to store valid usernames and passwords
+authorized_users = {'manaal1': 'hello123', 'mojiz3': 'hello456'}  # Add your authorized users
+
+# Function to check user authentication
+def authenticate(username, password):
+    return username in authorized_users and password == authorized_users[username]
 
 @st.cache_resource(ttl="2h")
 def configure_db(db_uri):
@@ -180,7 +191,7 @@ def query_refiner(input):
     tokens_used = response.usage.total_tokens
     return response.choices[0].message.content, tokens_used
 
-
+credentials = ['090078601']
 #logic-function for prompts
 def get_meeting_keywords(input):
   keywords = []
@@ -241,9 +252,7 @@ def input_classifier(input):
             response_token_usage.append(tokens_used)
             st.session_state['token_usage'].append(response_token_usage)
         st.subheader("Token Usage Information:")
-        for idx, response_token_usage in enumerate(st.session_state['token_usage']):
-            for response_idx, tokens_used in enumerate(response_token_usage):
-                st.write(f"Response {idx + 1}, Input {response_idx + 1}: {tokens_used} tokens used")
+        st.write('token_usage')
 
     elif response == 'C':
         #conversation_string = get_conversation_string()
@@ -251,7 +260,6 @@ def input_classifier(input):
         #messages = [{'role':'system', 'content': vec_db},
                 #{'role':'user', 'content': input}]
         context, tokens_used = query_refiner(input) 
-        st.subheader("Refining Your Query")
         response3 = find_match(context) 
         st.session_state['responses'].append(response3)
 
@@ -263,16 +271,26 @@ def input_classifier(input):
 
         # Display token usage information
         st.subheader("Token Usage Information:")
-        for idx, response_token_usage in enumerate(st.session_state['token_usage']):
-            for response_idx, tokens_used in enumerate(response_token_usage):
-                st.write(f"Response {idx + 1}, Input {response_idx + 1}: {tokens_used} tokens used")
+        st.write('token_usage')
     
-    elif response == 'P':
-        keywords = get_sql_keywords(input)
-        messages =  [{'role':'system', 'content': NLP_SQL.format(pm_keywords = keywords)},
-              {'role':'user', 'content': f'{delimiter}{input}{delimiter}'}]
-        response4 = agent.run(messages)
-        st.session_state['responses'].append(response4)
+    if response == 'P':
+        # Get user input for authentication only for the 'P' case
+        auth_username = st.text_input("Enter your username:")
+        auth_password = st.text_input("Enter your password:", type="password")
+
+        # Check if the entered username and password are valid
+        if st.button("Authenticate"):
+            if authenticate(auth_username, auth_password):
+                st.success("Authentication successful!")
+
+                # Proceed with the SQL-related functionality only after authentication
+                keywords = get_sql_keywords(input)
+                messages = [{'role':'system', 'content': NLP_SQL.format(pm_keywords=keywords)},
+                            {'role':'user', 'content': f'{delimiter}{input}{delimiter}'}]
+                response4 = agent.run(messages)
+                st.session_state['responses'].append(response4)
+            else:
+                st.error("Authentication failed. Access denied.")
 
 
         
@@ -280,6 +298,12 @@ def input_classifier(input):
 st.header("Data Pilot GPT :rocket:")
 
 pdf = st.file_uploader("Upload your PDF", type='pdf')
+underlying_embeddings = OpenAIEmbeddings()
+
+store = LocalFileStore("./cache/")
+
+cached_embedder = CacheBackedEmbeddings.from_bytes_store(
+    underlying_embeddings, store, namespace=underlying_embeddings.model)
 if pdf is not None:
         #pdf reader
         pdf_reader = PdfReader(pdf)
@@ -287,31 +311,19 @@ if pdf is not None:
         text = ""
         for page in pdf_reader.pages:
             text += page.extract_text()
-        
-
 
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=1000,
-            chunk_overlap=200,
+            chunk_overlap=100,
             length_function=len
             )
         chunks = text_splitter.split_text(text=text)
  
         # # embeddings
-        store_name = pdf.name[:-4]
-        st.write(f'{store_name}')
-        # st.write(chunks)
- 
-        if os.path.exists(f"{store_name}.pkl"):
-            with open(f"{store_name}.pkl", "rb") as f:
-                VectorStore = pickle.load(f)
-        else:
-            embeddings = OpenAIEmbeddings()
-            VectorStore = FAISS.from_texts(chunks, embedding=embeddings)
-            with open(f"{store_name}.pkl", "wb") as f:
-                pickle.dump(VectorStore, f)
+        db = FAISS.from_texts(chunks, cached_embedder)
 
-if 'responses' not in st.session_state or st.sidebar.button("Clear message history"):
+
+if 'responses' not in st.session_state:
     st.session_state['responses'] = ["How can I assist you? You can ask me about the task nomenclature or even the HR policies"]
 
 if 'requests' not in st.session_state:
@@ -320,8 +332,6 @@ if 'requests' not in st.session_state:
 if 'buffer_memory' not in st.session_state:
             st.session_state.buffer_memory=ConversationBufferWindowMemory(k=3,return_messages=True)
 
-if "messages" not in st.session_state:
-    st.session_state.messages = []
 
 # container for chat history
 response_container = st.container()
@@ -329,36 +339,29 @@ response_container = st.container()
 textcontainer = st.container()
 
 #bot front
-with textcontainer:
-    query = st.text_input("Query: ", key="input")
+user_input = st.text_input("Query: ", key="input")
+if st.button("Submit Query"):
     if pdf is not None:
-        docs = VectorStore.similarity_search(query=query, k=3)
-        chain = load_qa_chain(llm=client, chain_type="stuff")
+        docs = db.similarity_search(query=user_input, k=3)
+        chain = load_qa_chain(llm=client3, chain_type="stuff")
 
         with get_openai_callback() as cb:
-            response = chain.run(input_documents=docs, question=query)
-            st.write(response)
-     
+            bot_response = chain.run(input_documents=docs, question=user_input)
+            st.write(bot_response)
     else:
-        if query:
-            memory = st.session_state.buffer_memory
-            #memory.add_user_message(query)
-            #messages = [current_message]  
-            with st.spinner("Kaash mein bhi pilot hota.."):
-                context = input_classifier(query)
-                response = print(context)
-            for message in st.session_state.messages:
-                with st.chat_message(message["role"]):
-                    st.markdown(message["content"])
-            st.session_state.requests.append(query)
-            st.session_state.responses.append(response) 
-        
-         
+        if user_input:
+            # Process user input and update session state
+            #st.session_state.buffer_memory.add_user_message(user_input)
+            context = input_classifier(user_input)
+            bot_response = context
+            st.session_state['requests'].append(user_input)
+            st.session_state['responses'].append(bot_response)
 
-with response_container:
-    if st.session_state['responses']:
+# Display chat history
+if st.session_state['requests']:
+    for i in range(len(st.session_state['requests']) - 1, -1, -1):
+        # Display user input
+        message(st.session_state["requests"][i], is_user=True, key=str(i))
+        # Display bot response
+        message(st.session_state['responses'][i])
 
-        for i in range(len(st.session_state['responses'])):
-            message(st.session_state['responses'][i],key=str(i))
-            if i < len(st.session_state['requests']):
-                message(st.session_state["requests"][i], is_user=True,key=str(i)+ '_user')
