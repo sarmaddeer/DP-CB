@@ -127,7 +127,7 @@ Database Expert: Create SQL queries to extract information from columns id, name
 Your job is the give your response in bullet format and to always quote numerical values instead of using words to define a range of a given time period.
 
 """
-@st.cache_resource(ttl="2h")
+@st.cache_resource(ttl="5h")
 def configure_db(db_uri):
     try:  
         return SQLDatabase.from_uri(database_uri=db_uri)
@@ -144,6 +144,7 @@ agent = create_sql_agent(
     toolkit=toolkit,
     verbose=True,
     agent_type=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+    handle_parsing_errors=True 
 )
 
 if 'token_usage' not in st.session_state:
