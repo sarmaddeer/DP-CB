@@ -4,7 +4,6 @@ from openai import OpenAI
 import openai
 import re
 import os
-import pickle
 from pathlib import Path
 from langchain.text_splitter import RecursiveCharacterTextSplitter, CharacterTextSplitter
 from PyPDF2 import PdfReader
@@ -25,6 +24,9 @@ from langchain.agents import create_sql_agent
 import pinecone
 from dotenv import load_dotenv
 
+# App title
+st.header("Data Pilot GPT 💬:rocket:")
+
 load_dotenv()
 
 PINECONE_API_KEY = os.getenv('PINECONE_API_KEY')
@@ -41,18 +43,6 @@ openai.api_key = OPENAI_API_KEY
 
 db_filepath = (Path(__file__).parent / "fashion_db.sqlite").absolute()
 db_uri = f"sqlite:///{db_filepath}"
-
-
-if 'buffer_memory' not in st.session_state:
-            st.session_state.buffer_memory=ConversationBufferWindowMemory(k=3,return_messages=True)
-memory = st.session_state.buffer_memory
-
-if st.button("Clear message history"):
-    st.session_state['responses'] = ["How can I assist you? You can ask me about the task nomenclature or even the HR policies"]
-
-
-if "messages" not in st.session_state:
-    st.session_state.messages = []
 
 #prompts
 delimiter = '####'
@@ -94,7 +84,7 @@ AI: "Dashboard Development - Dashboard Update for 7knots" \
 
 """
 #3
-vec_db =  f"""You are an assistant who helps the user with information from the available database. A query text will be provided usually in the form of a question and your job will be to provide a response based on the chat memory {memory} and the {input}. \
+vec_db =  f"""You are an assistant who helps the user with information from the available database. A query text will be provided usually in the form of a question and your job will be to provide a response based on the {input}. \
 You will make sure that the response is concise and to the point.\
 All you responses will be in a bulleted list and you will not exceed more than 4 points in your responses. \
 
@@ -138,18 +128,14 @@ Database Expert: Create SQL queries to extract information from columns id, name
 Your job is the give your response in bullet format and to always quote numerical values instead of using words to define a range of a given time period.
 
 """
-
-# Add a dictionary to store valid usernames and passwords
-authorized_users = {'manaal1': 'hello123', 'mojiz3': 'hello456'}  # Add your authorized users
-
-# Function to check user authentication
-def authenticate(username, password):
-    return username in authorized_users and password == authorized_users[username]
-
 @st.cache_resource(ttl="2h")
 def configure_db(db_uri):
-    return SQLDatabase.from_uri(database_uri=db_uri)
-
+    try:  
+        return SQLDatabase.from_uri(database_uri=db_uri)
+    except Exception as e:
+         print(f"Error occurred - DB not found: {e}")
+         return None
+    
 db = configure_db(db_uri)
 
 toolkit = SQLDatabaseToolkit(db=db, llm=client3)
@@ -161,141 +147,153 @@ agent = create_sql_agent(
     agent_type=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
 )
 
-# container for chat history
-response_container = st.container()
-# container for text box
-textcontainer = st.container()
-
 if 'token_usage' not in st.session_state:
     st.session_state['token_usage'] = []
 
 #core-function
 def get_completion_from_messages1(messages, model='gpt-3.5-turbo', temperature=0.2, max_tokens=500):
-    response = client2.chat.completions.create(model=model, messages=messages, temperature=temperature, max_tokens=max_tokens)
-    response_message = response.choices[0].message.content
-    tokens_used = response.usage.total_tokens
-    return response_message, tokens_used
+    try:
+        response = client2.chat.completions.create(model=model, messages=messages, temperature=temperature, max_tokens=max_tokens)
+        response_message = response.choices[0].message.content
+        tokens_used = response.usage.total_tokens
+        return response_message, tokens_used
+    except Exception as e:
+         #Handle the exception
+         print(f"An error occured in get_completion_from_messages: {e}")
+         return None, None
 
 def query_refiner(input):
-
-    response = client2.chat.completions.create(
-    model="gpt-3.5-turbo",
-    messages=[{'role':'system', 'content': vec_db},
-              {'role':'user', 'content': f'{delimiter}{input}{delimiter}'}],
-    temperature=0.1,
-    max_tokens=256,
-    top_p=1,
-    frequency_penalty=0,
-    presence_penalty=0
-    )
-    tokens_used = response.usage.total_tokens
-    return response.choices[0].message.content, tokens_used
+    try:
+        response = client2.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[{'role':'assistant', 'content': vec_db},
+                {'role':'user', 'content': f'{delimiter}{input}{delimiter}'}],
+        temperature=0.1,
+        max_tokens=256,
+        top_p=1,
+        frequency_penalty=0,
+        presence_penalty=0
+        )
+        tokens_used = response.usage.total_tokens
+        return response.choices[0].message.content, tokens_used
+    
+    except Exception as e:
+         #haandle the exception
+         print(f"An error occcured in query_refiner: {e}")
+         return None, None
 
 credentials = ['090078601']
 #logic-function for prompts
 def get_meeting_keywords(input):
-  keywords = []
-  meeting_words = re.findall(r"(meeting|agenda|discussion|sync|brainstoring|chat|call|conference)", input, re.IGNORECASE)
-  keywords.extend(meeting_words)
+    try: 
+        keywords = []
+        meeting_words = re.findall(r"(meeting|agenda|discussion|sync|brainstoring|chat|call|conference)", input, re.IGNORECASE)
+        keywords.extend(meeting_words)
 
-  meeting_types = re.findall(r"(internal|one-on-one|team|client|review|status)", input, re.IGNORECASE)
-  keywords.extend(meeting_types)
+        meeting_types = re.findall(r"(internal|one-on-one|team|client|review|status)", input, re.IGNORECASE)
+        keywords.extend(meeting_types)
 
-  topic_keywords = re.findall(r"(project|product|marketing|sales|finance|team|department)", input, re.IGNORECASE)
-  keywords.extend(topic_keywords)
+        topic_keywords = re.findall(r"(project|product|marketing|sales|finance|team|department)", input, re.IGNORECASE)
+        keywords.extend(topic_keywords)
 
-  return list(set(keywords))
-  pass
+        return list(set(keywords))
+    
+    except Exception as e:
+         print(f"An error occurred in finding matching keywords for meetings: {e}")
+         return []
 
 def get_sql_keywords(input):
-    keywords2 = []
-    pm_words = re.findall(r"(benzinga|7knots|estimated time|hours|hours spent|how much time does|how many hours)", input, re.IGNORECASE)
-    keywords2.extend(pm_words)
+    try:
+        keywords2 = []
+        pm_words = re.findall(r"(benzinga|7knots|estimated time|hours|hours spent|how much time does|how many hours)", input, re.IGNORECASE)
+        keywords2.extend(pm_words)
 
-    return list(set(keywords2))
-    pass
+        return list(set(keywords2))
+    except Exception as e:
+         print(f"An error occurred in getting SQL query keywords: {e}")
+         return []
 #task_nomenclature_gen.format(meeting_keywords = keywords)
 #vectorDB
 def find_match(input):
-    xq = openai.embeddings.create(input=input, model=model).data[0].embedding
-    result = index.query([xq], top_k=5, include_metadata=True)
-    print(result)
-    return result['matches'][0]['metadata']['text']+"\n"+result['matches'][1]['metadata']['text']
-   
+    try:
+        xq = openai.embeddings.create(input=input, model=model).data[0].embedding
+        result = index.query([xq], top_k=5, include_metadata=True)
+        print(result)
+        return result['matches'][0]['metadata']['text']+"\n"+result['matches'][1]['metadata']['text']
+    
+    except Exception as e:
+         print(f"An error occurred in find_match function: {e}")
+         return None
 
 #def has_meeting_keywords(input):
 
 def input_classifier(input):
-    messages = [{'role': 'system', 'content': query_classifier},
-            {'role': 'user', 'content': f'{delimiter}{input}{delimiter}'}]
-    response, tokens_used = get_completion_from_messages1(messages, max_tokens=1) 
-    print(response)
+    try:
+        messages = [{'role': 'assistant', 'content': query_classifier},
+                {'role': 'user', 'content': f'{delimiter}{input}{delimiter}'}]
+        response, tokens_used = get_completion_from_messages1(messages, max_tokens=1) 
+        print(response)
 
-    # Initialize token usage for the current response
-    response_token_usage = []
-
-    if tokens_used is not None:
-        response_token_usage.append(tokens_used)
-        st.session_state['token_usage'].append(response_token_usage)
-    
-    if response == 'T':
-        keywords = get_meeting_keywords(input)
-        messages =  [{'role':'system', 'content': task_nomenclature_gen.format(meeting_keywords = keywords)},
-              {'role':'user', 'content': f'{delimiter}{input}{delimiter}'}]
-        response2, tokens_used = get_completion_from_messages1(messages, max_tokens=500)
-        print(response2)
-        st.session_state['responses'].append(response2)
-
-        # Store token usage for the current response
+        # Initialize token usage for the current response
         response_token_usage = []
+
         if tokens_used is not None:
             response_token_usage.append(tokens_used)
             st.session_state['token_usage'].append(response_token_usage)
-        st.subheader("Token Usage Information:")
-        st.write('token_usage')
-
-    elif response == 'C':
-        #conversation_string = get_conversation_string()
-        #refined_query = query_refiner(conversation_string, query)
-        #messages = [{'role':'system', 'content': vec_db},
-                #{'role':'user', 'content': input}]
-        context, tokens_used = query_refiner(input) 
-        response3 = find_match(context) 
-        st.session_state['responses'].append(response3)
-
-        # Store token usage for the current response
-        response_token_usage = []
-        if tokens_used is not None:
-            response_token_usage.append(tokens_used)
-            st.session_state['token_usage'].append(response_token_usage)
-
-        # Display token usage information
-        st.subheader("Token Usage Information:")
-        st.write('token_usage')
-    
-    if response == 'P':
-        # Get user input for authentication only for the 'P' case
-        auth_username = st.text_input("Enter your username:")
-        auth_password = st.text_input("Enter your password:", type="password")
-
-        # Check if the entered username and password are valid
-        if st.button("Authenticate"):
-            if authenticate(auth_username, auth_password):
-                st.success("Authentication successful!")
-
-                # Proceed with the SQL-related functionality only after authentication
-                keywords = get_sql_keywords(input)
-                messages = [{'role':'system', 'content': NLP_SQL.format(pm_keywords=keywords)},
-                            {'role':'user', 'content': f'{delimiter}{input}{delimiter}'}]
-                response4 = agent.run(messages)
-                st.session_state['responses'].append(response4)
-            else:
-                st.error("Authentication failed. Access denied.")
-
-
         
-    
-st.header("Data Pilot GPT :rocket:")
+        if response == 'T':
+            keywords = get_meeting_keywords(input)
+            messages =  [{'role':'assistant', 'content': task_nomenclature_gen.format(meeting_keywords = keywords)},
+                {'role':'user', 'content': f'{delimiter}{input}{delimiter}'}]
+            response2, tokens_used = get_completion_from_messages1(messages, max_tokens=500)
+            
+            if response2 is not None:
+                st.session_state['responses'].append(response2)
+            return response2
+
+            # Store token usage for the current response
+            response_token_usage = []
+            if tokens_used is not None:
+                response_token_usage.append(tokens_used)
+                st.session_state['token_usage'].append(response_token_usage)
+            st.subheader("Token Usage Information:")
+            st.write('token_usage')
+
+        elif response == 'C':
+            #conversation_string = get_conversation_string()
+            #refined_query = query_refiner(conversation_string, query)
+            #messages = [{'role':'system', 'content': vec_db},
+                    #{'role':'user', 'content': input}]
+            context, tokens_used = query_refiner(input) 
+            response3 = find_match(context) 
+            if response3 is not None:
+                st.session_state['responses'].append(response3)
+            return response3
+
+            # Store token usage for the current response
+            response_token_usage = []
+            if tokens_used is not None:
+                response_token_usage.append(tokens_used)
+                st.session_state['token_usage'].append(response_token_usage)
+
+            # Display token usage information
+            st.subheader("Token Usage Information:")
+            st.write('token_usage')
+        
+        if response == 'P':
+            # Get user input for authentication only for the 'P' case
+                    # Proceed with the SQL-related functionality only after authentication
+                    keywords = get_sql_keywords(input)
+                    messages = [{'role':'system', 'content': NLP_SQL.format(pm_keywords=keywords)},
+                                {'role':'user', 'content': f'{delimiter}{input}{delimiter}'}]
+                    response4 = str (agent.run(messages))
+                    if response4 is not None:
+                        st.session_state['responses'].append(response4)
+                    return response4
+    except Exception as e:
+         print(f"An error occured classifying the input as per the user query and the bot parameters: {e}")
+         return "An error occurred, please refresh and try again", None
+
 
 pdf = st.file_uploader("Upload your PDF", type='pdf')
 underlying_embeddings = OpenAIEmbeddings()
@@ -322,46 +320,50 @@ if pdf is not None:
         # # embeddings
         db = FAISS.from_texts(chunks, cached_embedder)
 
-
 if 'responses' not in st.session_state:
-    st.session_state['responses'] = ["How can I assist you? You can ask me about the task nomenclature or even the HR policies"]
+    st.session_state['responses'] = []
 
-if 'requests' not in st.session_state:
-    st.session_state['requests'] = []
+# Store LLM generated responses
+if "messages" not in st.session_state.keys():
+    st.session_state.messages = [{"role": "assistant", "content": "How may I assist you today?"}]
 
-if 'buffer_memory' not in st.session_state:
-            st.session_state.buffer_memory=ConversationBufferWindowMemory(k=3,return_messages=True)
+# Display or clear chat messages
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.write(message["content"])
 
+def clear_chat_history():
+    st.session_state.messages = [{"role": "assistant", "content": "How may I assist you today?"}]
+st.sidebar.button('Clear Chat History', on_click=clear_chat_history)
 
-# container for chat history
-response_container = st.container()
-# container for text box
-textcontainer = st.container()
-
-#bot front
-user_input = st.text_input("Query: ", key="input")
-if st.button("Submit Query"):
+# User-provided prompt
+if prompt := st.chat_input("Write your query here "):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.write(prompt)
+else:
     if pdf is not None:
-        docs = db.similarity_search(query=user_input, k=3)
+        prompt = st.text_input("Query the PDF now, click the x button to return to bot")
+        docs = db.similarity_search(query=prompt, k=3)
         chain = load_qa_chain(llm=client3, chain_type="stuff")
 
         with get_openai_callback() as cb:
-            bot_response = chain.run(input_documents=docs, question=user_input)
+            bot_response = chain.run(input_documents=docs, question=prompt)
             st.write(bot_response)
-    else:
-        if user_input:
-            # Process user input and update session state
-            #st.session_state.buffer_memory.add_user_message(user_input)
-            context = input_classifier(user_input)
-            bot_response = context
-            st.session_state['requests'].append(user_input)
-            st.session_state['responses'].append(bot_response)
 
-# Display chat history
-if st.session_state['requests']:
-    for i in range(len(st.session_state['requests']) - 1, -1, -1):
-        # Display user input
-        message(st.session_state["requests"][i], is_user=True, key=str(i))
-        # Display bot response
-        message(st.session_state['responses'][i])
-
+# Generate a new response if last message is not from assistant
+if st.session_state.messages[-1]["role"] != "assistant":
+    with st.chat_message("assistant"):
+        with st.spinner("Thinking..."):
+            response = input_classifier(prompt)
+            placeholder = st.empty()
+            full_response = ''
+            for item in response:
+                try:
+                    full_response += item
+                    placeholder.markdown(full_response)
+                except:
+                    pass
+            placeholder.markdown(full_response)
+    message = {"role": "assistant", "content": full_response}
+    st.session_state.messages.append(message)
