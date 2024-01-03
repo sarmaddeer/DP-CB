@@ -11,4 +11,4 @@ langchain-experimental==0.0.47
 faiss-cpu
 streamlit-chat
 tiktoken
-langchain_core 
+langchain_core==0.1.4
