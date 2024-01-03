@@ -19,7 +19,6 @@ from langchain.callbacks import get_openai_callback
 from streamlit_chat import message
 from langchain.embeddings import CacheBackedEmbeddings
 from langchain.storage import LocalFileStore
-from InstructorEmbedding import INSTRUCTOR
 from langchain.agents import create_sql_agent
 import pinecone
 from dotenv import load_dotenv
