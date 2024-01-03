@@ -25,6 +25,14 @@ from dotenv import load_dotenv
 
 # App title
 st.header("Data Pilot GPT 💬:rocket:")
+credentials = ["090078601"]
+
+input_credentials = st.sidebar.text_input("Please enter your valid PM Authorization key: ", type="password")
+if not input_credentials in credentials:
+    st.warning('Please enter your credentials!', icon='⚠️')
+else:
+    st.success('Proceed to entering your prompt message!', icon='👉')
+
 
 load_dotenv()
 
@@ -127,6 +135,9 @@ Database Expert: Create SQL queries to extract information from columns id, name
 Your job is the give your response in bullet format and to always quote numerical values instead of using words to define a range of a given time period.
 
 """
+
+
+
 @st.cache_resource(ttl="5h")
 def configure_db(db_uri):
     try:  
@@ -283,13 +294,16 @@ def input_classifier(input):
         if response == 'P':
             # Get user input for authentication only for the 'P' case
                     # Proceed with the SQL-related functionality only after authentication
-                    keywords = get_sql_keywords(input)
-                    messages = [{'role':'system', 'content': NLP_SQL.format(pm_keywords=keywords)},
-                                {'role':'user', 'content': f'{delimiter}{input}{delimiter}'}]
-                    response4 = str (agent.run(messages))
-                    if response4 is not None:
-                        st.session_state['responses'].append(response4)
-                    return response4
+                    if input_credentials in credentials:
+                        keywords = get_sql_keywords(input)
+                        messages = [{'role':'system', 'content': NLP_SQL.format(pm_keywords=keywords)},
+                                    {'role':'user', 'content': f'{delimiter}{input}{delimiter}'}]
+                        response4 = str (agent.run(messages))
+                        if response4 is not None:
+                            st.session_state['responses'].append(response4)
+                        return response4
+                    else:
+                        return "You are not authorized"
     except Exception as e:
          print(f"An error occured classifying the input as per the user query and the bot parameters: {e}")
          return "An error occurred, please refresh and try again", None
@@ -354,7 +368,7 @@ else:
 # Generate a new response if last message is not from assistant
 if st.session_state.messages[-1]["role"] != "assistant":
     with st.chat_message("assistant"):
-        with st.spinner("Abaay jaani sochnay de.."):
+        with st.spinner("Thinking..."):
             response = input_classifier(prompt)
             placeholder = st.empty()
             full_response = ''
