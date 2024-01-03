@@ -25,7 +25,7 @@ from dotenv import load_dotenv
 
 # App title
 st.header("Data Pilot GPT 💬:rocket:")
-credentials = ["090078601"]
+credentials = ["manaal1", "mojiz2", "mankee3", "zainab4", "eshaStop"]
 
 input_credentials = st.sidebar.text_input("Please enter your valid PM Authorization key: ", type="password")
 if not input_credentials in credentials:
