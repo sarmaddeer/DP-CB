@@ -193,7 +193,7 @@ def query_refiner(input):
          print(f"An error occcured in query_refiner: {e}")
          return None, None
 
-credentials = ['090078601']
+
 #logic-function for prompts
 def get_meeting_keywords(input):
     try: 
