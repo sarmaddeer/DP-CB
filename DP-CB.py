@@ -31,7 +31,7 @@ input_credentials = st.sidebar.text_input("Please enter your valid PM Authorizat
 if not input_credentials in credentials:
     st.warning('Please enter your credentials!', icon='⚠️')
 else:
-    st.success('Proceed to entering your prompt message!', icon='👉')
+    st.success('Proceed to being the fabulous PM that you are - or not', icon='👉')
 
 
 load_dotenv()
@@ -303,7 +303,7 @@ def input_classifier(input):
                             st.session_state['responses'].append(response4)
                         return response4
                     else:
-                        return "You are not authorized"
+                        return "You are not authorized, please stop jumping out of the dataplane"
     except Exception as e:
          print(f"An error occured classifying the input as per the user query and the bot parameters: {e}")
          return "An error occurred, please refresh and try again", None
