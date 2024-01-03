@@ -3,11 +3,11 @@ pandas
 openai
 regex
 PyPDF2
-langchain
+langchain==0.0.353
 pathlib
 pinecone-client
 python-dotenv
-langchain-experimental
+langchain-experimental==0.0.47
 faiss-cpu
 streamlit-chat
 tiktoken
