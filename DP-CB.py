@@ -368,7 +368,7 @@ else:
 if st.session_state.messages[-1]["role"] != "assistant":
     with st.chat_message("assistant"):
         with st.spinner("Bro eik second de.."):
-            response = input_classifier(prompt)
+            response = str(input_classifier(prompt))
             placeholder = st.empty()
             full_response = ''
             for item in response:
