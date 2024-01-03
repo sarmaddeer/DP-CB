@@ -148,10 +148,10 @@ def configure_db(db_uri):
     
 db = configure_db(db_uri)
 
-toolkit = SQLDatabaseToolkit(db=db, llm=client3)
+toolkit = SQLDatabaseToolkit(db=db, llm=client2)
 
 agent = create_sql_agent(
-    llm=client3,
+    llm=client2,
     toolkit=toolkit,
     verbose=True,
     agent_type=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
@@ -193,7 +193,6 @@ def query_refiner(input):
          print(f"An error occcured in query_refiner: {e}")
          return None, None
 
-credentials = ['090078601']
 #logic-function for prompts
 def get_meeting_keywords(input):
     try: 
