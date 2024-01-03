@@ -193,7 +193,7 @@ def query_refiner(input):
          print(f"An error occcured in query_refiner: {e}")
          return None, None
 
-
+credentials = ['090078601']
 #logic-function for prompts
 def get_meeting_keywords(input):
     try: 
@@ -368,7 +368,7 @@ else:
 # Generate a new response if last message is not from assistant
 if st.session_state.messages[-1]["role"] != "assistant":
     with st.chat_message("assistant"):
-        with st.spinner("Thinking..."):
+        with st.spinner("Bro eik second de.."):
             response = input_classifier(prompt)
             placeholder = st.empty()
             full_response = ''
