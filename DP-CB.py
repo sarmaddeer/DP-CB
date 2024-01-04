@@ -91,20 +91,11 @@ AI: "Dashboard Development - Dashboard Update for 7knots" \
 
 """
 #3
-vec_db =  f"""You are an assistant who helps the user with information from the available database. A query text will be provided usually in the form of a question and your job will be to provide a response based on the {input}. \
-You will make sure that the response is concise and to the point.\
+vec_db =  f"""You are an assistant who helps the user with information from the available database. A query text will be provided usually in the form of a question and your job will be to provide a response based on the content derived from the vectorDB. \
+You will make sure that the response is concise and to the point and from all the results you will summarize the best ones into a response. \
 All you responses will be in a bulleted list and you will not exceed more than 4 points in your responses. \
 
-the query will be asking you questions about clickup task nomenclature which you can look up referenced from the available database. The response will be short and to the point, \
-lastly the user can ask you about company policies which you are to look in from the available database and revert with an answer as consice as possible. \
-
-Examples of clickup task nomenclature query: "How do we write meetings on clickup". \
-Example of policies query: "Can you tell me about employee leaves". \
-Example of AI response: "Employee leaves are as follows\
-1 - Casual leaves - 8\
-2 - Annual leaves - 10\
-3 - Mental Health - 2" \
-
+you will get the response in an dictionary format. Your job is to read those and summarize them according to the most appropriate answer and reproduce in bullet points 
 """
 
 #NLP-SQL Prompt
@@ -148,10 +139,10 @@ def configure_db(db_uri):
     
 db = configure_db(db_uri)
 
-toolkit = SQLDatabaseToolkit(db=db, llm=client2)
+toolkit = SQLDatabaseToolkit(db=db, llm=client3)
 
 agent = create_sql_agent(
-    llm=client2,
+    llm=client3,
     toolkit=toolkit,
     verbose=True,
     agent_type=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
@@ -274,8 +265,10 @@ def input_classifier(input):
             #refined_query = query_refiner(conversation_string, query)
             #messages = [{'role':'system', 'content': vec_db},
                     #{'role':'user', 'content': input}]
-            context, tokens_used = query_refiner(input) 
-            response3 = find_match(context) 
+            response_1 = find_match(input)
+            messages =  [{'role':'assistant', 'content': vec_db},
+                {'role':'user', 'content': f'{response_1}'}]
+            response3 = get_completion_from_messages1(messages, max_tokens=200)
             if response3 is not None:
                 st.session_state['responses'].append(response3)
             return response3
