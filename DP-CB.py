@@ -43,7 +43,7 @@ PINECONE_ENV = os.getenv('PINECONE_ENVIRONMENT')
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 
 client2 = OpenAI(api_key=OPENAI_API_KEY)
-client3 = ChatOpenAI(model_name="gpt-3.5-turbo-16k", openai_api_key=OPENAI_API_KEY, temperature=0)
+client3 = ChatOpenAI(model_name="gpt-3.5-turbo-16k", openai_api_key=OPENAI_API_KEY, temperature=0, max_tokens = 150)
 #llm = OpenAI(api_key=OPENAI_API_KEY, temperature=0, streaming=True)
 client = pinecone.init(api_key=PINECONE_API_KEY, environment=PINECONE_ENV)
 index = pinecone.Index('dp-index')
