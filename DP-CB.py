@@ -391,7 +391,7 @@ if prompt := st.chat_input("Write your query here "):
         st.write(prompt)
 else:
     if pdf is not None:
-        prompt = st.chat_input("Query the PDF now, click the x button on the side of the uploaded PDF to return to bot")
+        prompt = st.text_input("Query the PDF now, click the x button on the side of the uploaded PDF to return to bot")
         docs = db.similarity_search(query=prompt, k=3)
         chain = load_qa_chain(llm=client3, chain_type="stuff")
 
