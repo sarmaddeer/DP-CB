@@ -7,6 +7,8 @@ import os
 from pathlib import Path
 from langchain.text_splitter import RecursiveCharacterTextSplitter, CharacterTextSplitter
 from PyPDF2 import PdfReader
+from langchain.chains import ConversationChain
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from langchain.sql_database import SQLDatabase
 from langchain.agents.agent_types import AgentType
 from langchain.agents.agent_toolkits import SQLDatabaseToolkit
@@ -51,6 +53,9 @@ openai.api_key = OPENAI_API_KEY
 db_filepath = (Path(__file__).parent / "fashion_db.sqlite").absolute()
 db_uri = f"sqlite:///{db_filepath}"
 
+if 'buffer_memory' not in st.session_state:
+            st.session_state.buffer_memory=ConversationBufferWindowMemory(k=3,return_messages=True)
+
 #prompts
 delimiter = '####'
 
@@ -91,11 +96,43 @@ AI: "Dashboard Development - Dashboard Update for 7knots" \
 
 """
 #3
-vec_db =  f"""You are an assistant who helps the user with information from the available database. A query text will be provided usually in the form of a question and your job will be to provide a response based on the content derived from the vectorDB. \
-You will make sure that the response is concise and to the point and from all the results you will summarize the best ones into a response. \
-All you responses will be in a bulleted list and you will not exceed more than 4 points in your responses. \
+vec_db =  f"""you work as a summarizer for an output from the vector DB source. Your job is to summarize the output and then display it in bullet points and user readable form.\
+Your output should be clear and concise. There should be no dictionaries or non-grammatical objects in your output. \
 
-you will get the response in an dictionary format. Your job is to read those and summarize them according to the most appropriate answer and reproduce in bullet points 
+
+For example 
+
+User:
+
+'Leave\n'
+                                   '\n'
+                                   'Data Pilot’s motto is Trust. We trust our '
+                                   'people and give the accountability and '
+                                   'responsibility to them that they can plan '
+                                   'their leaves whenever they want but just '
+                                   'plan ahead. The Leave policy guidelines '
+                                   'are applicable to all the full-time team '
+                                   'members of the company.\n'
+                                   '\n'
+                                   'Each team member is entitled to 8 casual '
+                                   'leaves, 8 sick leaves, 4 Mental Health '
+                                   'leave and 10 annual leaves in one calendar '
+                                   'year. Causal and annual leaves will be '
+                                   'available on a pro-rata basis. During '
+                                   'probation, only 3 leaves are allowed. '
+                                   'However, a team member will be eligible '
+                                   'for Annual Leaves after 3 months of '
+                                   'full-time service.\n'
+                                   '\n'
+                                   'Annual and casual leaves are pro-rata '
+                                   'basis. For casual, 8/12=0.67 per month and '
+                                   'for annual 10/12=0.83 per month.'
+Assistant:
+Employee leaves are beased on the Leave Policy Guide. 
+- each member is entitled to 8 casual, 8 sick and 4 mental health leaves.
+- each employee gets 10 annual leaves in a calendar year
+
+for detail on each type of leave, ask the question accordingly
 """
 
 #NLP-SQL Prompt
@@ -126,8 +163,11 @@ Database Expert: Create SQL queries to extract information from columns id, name
 Your job is the give your response in bullet format and to always quote numerical values instead of using words to define a range of a given time period.
 
 """
+system_mes_temp = SystemMessagePromptTemplate.from_template(template= vec_db)
+human_msg_template = HumanMessagePromptTemplate.from_template(template="{input}")
+prompt_template = ChatPromptTemplate.from_messages([system_mes_temp, MessagesPlaceholder(variable_name="history"), human_msg_template])
 
-
+conversation = ConversationChain(memory = st.session_state.buffer_memory, llm=client3, prompt=prompt_template, verbose= True)
 
 @st.cache_resource(ttl="5h")
 def configure_db(db_uri):
@@ -153,7 +193,7 @@ if 'token_usage' not in st.session_state:
     st.session_state['token_usage'] = []
 
 #core-function
-def get_completion_from_messages1(messages, model='gpt-3.5-turbo', temperature=0.2, max_tokens=500):
+def get_completion_from_messages1(messages, model='gpt-3.5-turbo-16k', temperature=0.2, max_tokens=200):
     try:
         response = client2.chat.completions.create(model=model, messages=messages, temperature=temperature, max_tokens=max_tokens)
         response_message = response.choices[0].message.content
@@ -220,7 +260,7 @@ def find_match(input):
         xq = openai.embeddings.create(input=input, model=model).data[0].embedding
         result = index.query([xq], top_k=5, include_metadata=True)
         print(result)
-        return result['matches'][0]['metadata']['text']+"\n"+result['matches'][1]['metadata']['text']
+        return result['matches'][0]['metadata']['text']+result['matches'][1]['metadata']['text']
     
     except Exception as e:
          print(f"An error occurred in find_match function: {e}")
@@ -266,9 +306,10 @@ def input_classifier(input):
             #messages = [{'role':'system', 'content': vec_db},
                     #{'role':'user', 'content': input}]
             response_1 = find_match(input)
-            messages =  [{'role':'assistant', 'content': vec_db},
-                {'role':'user', 'content': f'{response_1}'}]
-            response3 = get_completion_from_messages1(messages, max_tokens=200)
+            #messages =  [{'role':'assistant', 'content': vec_db},
+               # {'role':'user', 'content': response_1}]
+            response3 = conversation.predict(input = f"Context:\n {response_1} \n\n Query:\n{input}")
+            print(response3)
             if response3 is not None:
                 st.session_state['responses'].append(response3)
             return response3
