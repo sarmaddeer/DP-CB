@@ -381,7 +381,7 @@ for message in st.session_state.messages:
 
 def clear_chat_history():
     st.session_state.messages = [{"role": "assistant", "content": "How may I assist you today?"}]
-st.sidebar.button('Clear Chat History', on_click=clear_chat_history)
+st.button('Clear Chat History', on_click=clear_chat_history)
 
 # User-provided prompt
 if prompt := st.chat_input("Write your query here "):
