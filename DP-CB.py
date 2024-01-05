@@ -32,7 +32,7 @@ credentials = ["manaal1", "mojiz2", "mankee3", "zainab4", "eshaStop"]
 
 input_credentials = st.sidebar.text_input("Please enter your valid PM Authorization key: ", type="password")
 if not input_credentials in credentials:
-    st.warning('Please enter your credentials!', icon='⚠️')
+    st.warning('Please enter your credentials on the side bar to the left top corner ">" to activate Project Manager Mode', icon='⚠️')
 else:
     st.success('Proceed to being the fabulous PM that you are - or not', icon='👉')
 
