@@ -26,6 +26,7 @@ import pinecone
 from dotenv import load_dotenv
 
 # App title
+st.set_page_config(initial_sidebar_state='collapsed')
 st.header("Data Pilot GPT 💬:rocket:")
 credentials = ["manaal1", "mojiz2", "mankee3", "zainab4", "eshaStop"]
 
