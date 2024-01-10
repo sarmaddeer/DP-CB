@@ -343,7 +343,7 @@ def input_classifier(input):
          return "An error occurred, please refresh and try again", None
 
 
-pdf = st.file_uploader("Upload your PDF", type='csv')
+pdf = st.file_uploader("Upload your PDF", type='pdf')
 underlying_embeddings = OpenAIEmbeddings()
 
 store = LocalFileStore("./cache/")
