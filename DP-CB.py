@@ -45,6 +45,7 @@ OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 
 client2 = OpenAI(api_key=OPENAI_API_KEY)
 client3 = ChatOpenAI(model_name="gpt-3.5-turbo-16k", openai_api_key=OPENAI_API_KEY, temperature=0, max_tokens = 150)
+client4 = ChatOpenAI(model_name="gpt-3.5-turbo-16k", openai_api_key=OPENAI_API_KEY, temperature=0, max_tokens = 500)
 #llm = OpenAI(api_key=OPENAI_API_KEY, temperature=0, streaming=True)
 client = pinecone.init(api_key=PINECONE_API_KEY, environment=PINECONE_ENV)
 index = pinecone.Index('dp-index')
@@ -180,10 +181,10 @@ def configure_db(db_uri):
     
 db = configure_db(db_uri)
 
-toolkit = SQLDatabaseToolkit(db=db, llm=client3)
+toolkit = SQLDatabaseToolkit(db=db, llm=client4)
 
 agent = create_sql_agent(
-    llm=client3,
+    llm=client4,
     toolkit=toolkit,
     verbose=True,
     agent_type=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
@@ -393,7 +394,7 @@ else:
     if pdf is not None:
         prompt = st.text_input("Query the PDF now, click the x button on the side of the uploaded PDF to return to bot")
         docs = db.similarity_search(query=prompt, k=3)
-        chain = load_qa_chain(llm=client3, chain_type="stuff")
+        chain = load_qa_chain(llm=client4, chain_type="stuff")
 
         with get_openai_callback() as cb:
             bot_response = chain.run(input_documents=docs, question=prompt)
