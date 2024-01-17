@@ -94,6 +94,7 @@ task_nomenclature_gen = f"""Help me create clear task names based on the user's 
 Examples:
 
 Meeting notes - Discuss onboarding plan with Sarah
+Internal Meeting - Chatbot Discussion with Salman
 Data validation - Blueconics dashboard Q4
 Dashboard development - Update 7knots sales pipeline
 Client Meeting - Weekly Progress Update
