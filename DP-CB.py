@@ -63,106 +63,111 @@ delimiter = '####'
 
 #layer-1
 #1
-query_classifier = f"""You are a helpful assistant who's task is to classify the user queries according to the input into three separate nodes. The user query will present itself in a question. \
-The user can ask you to either generate a task name and nomenclature for logging it on clickup based on the query. Or the user can ask you questions about task nomenclature guidelines and HR policies in the documentation found \
-on the vector database. Or the user can ask you questions based on project management. This can include questions relating to the time spent on a particular project or the number of hours spent by someone. \
-The given user input will be provided between delimiters i.e., {delimiter}. \
+query_classifier = f"""Classify user queries into three categories:
 
-Your task is to classify the whether the query would be related to generating task nomenclature, document referencing of nomenclature guidelines and HR policies or whether it is a project management query. \
-Mostly generating task nomenclature would be from the user stating their task. User queries about task nomenclature guidelines would be asking about how to name certain task types based on the clickup guidelines. \
-User queries based on project management would be time related or relating to a particular person or project. \
+Task Nomenclature Generation:
 
-Examples of task nomenclature: Task about internal meetings, How to write about dashboard discussion on blueconic dashboards, devops task nomenclature examples, etc. \
-Examples of company policies: How many medical leaves do I get, What is the procedure to apply for leaves, What is my medical allowance, Company policies on Clickup SOPs, Daily Standup information, etc. \
-Examples of project management: How many hours did Sarmad spend on chatbot yesterday, how many hours were spent on blueconic last week, how many people worked on 7knots yesterday and for how long, etc. \
+User asks how to create a task name in ClickUp.
+Example: "How do I name a task for a meeting with the marketing team?"
 
-Provide your output in string values: 'T' for Task nomenclature, 'C' for company policies and 'P' for project management.
+Company Policies and Documentation:
+
+User asks about HR policies, ClickUp guidelines, or other company information found in the vector database.
+Example: "What's the policy on working from home?"
+Example: "Where would i log internal meeting on clickup?"
+Example: "Where would i log the annual dinner on clickup?"
+
+Project Management:
+
+User asks about time spent on projects, hours logged by individuals, or other project-related data.
+Example: "How many hours did we spend on the Blueconics project last week?"
+Example: "Can you giive me a breakdown of the hours logged by team members on the clickup this week?"
+Example: "Weekly progress Report"
+
+Provide your output in string values: 'T' for Task nomenclature generation, 'C' for company policies and documentation and 'P' for project management.
 """
 #2
-task_nomenclature_gen = f"""you are a helpful assistant who's task is to generative task nomenclature based on the examples provided. \
-The given user input will be provided between delimiters i.e., {delimiter}. \
-Provide the proper task nomenclature as defined in the examples below: \
+task_nomenclature_gen = f"""Help me create clear task names based on the user's query. The user asks me how to name a task. I use the details from their query to create a name like:
 
-the user can ask you query about the how to name a task which you will use the information in the query to type it out like "[Task type] - [Description of the task].\
+[Action] - [Specific details]
 
-Example of prompts would include the user asking: "{delimiter}What is the task nomenclature for meetings{delimiter}"\
-AI: "can you tell me what kind of a meeting it is"\
-User: "{delimiter}I have a meeting with my teammate Ali where I ask him how to work on the customer churn prediction model{delimiter}"\
-AI: "[Internal Meeting] - [Discussion with Ali on Customer Churn Prediciton Model] \
+Examples:
 
-Another example could be a user asking: "{delimiter}what would be the task nomenclature for data validation for blueconics dashboard{delimiter}" \
-AI: "Log this task in the Blueconics list under the appropriate space and then log in the task as follows: Data Validation - Blueconics Dashboard" \
-
-Another Example could be a user asking: "{delimiter}What would be the task nomenclature for working on dashboards for 7knots{delimiter}" \
-AI: "Dashboard Development - Dashboard Update for 7knots" \
+Meeting notes - Discuss onboarding plan with Sarah
+Data validation - Blueconics dashboard Q4
+Dashboard development - Update 7knots sales pipeline
+Client Meeting - Weekly Progress Update
+Client Communication - Email - Project Updates
+Client Communication - Teams - Weekly Progress Update
+Project Management - Weekly Progress Report
+ML - Churn Prediction Model for Benzinga
+Estimation - Revise Hours & Update Client
+Data Scraping - POC
+Self-Paced Study - AWS Concepts & Services
+Team Training - Bi Weekly Session
+HR Support - Skill Set Mapping
 
 """
 #3
-vec_db =  f"""you work as a summarizer for an output from the vector DB source. Your job is to summarize the output and then display it in bullet points and user readable form.\
-Your output should be clear and concise. There should be no dictionaries or non-grammatical objects in your output. \
+vec_db =  f"""You will be using the vector database to look up specific information. You will then use the information available to answer questions. \
+Do not ask the user to consult the manual but use the entire information available to answer the questions on your own. \
 
+Examples of questions:
+I am a part time employee, what are my benefits?\
+I am a part time employee so my benefits are different than a full time employee. \
+I am a part time employee how many leaves do I get?\
+How many leaves am I allowed in a year?\
+Where would I log a certain task in clickup?
 
-For example 
-
-User:
-
-'Leave\n'
-                                   '\n'
-                                   'Data Pilot’s motto is Trust. We trust our '
-                                   'people and give the accountability and '
-                                   'responsibility to them that they can plan '
-                                   'their leaves whenever they want but just '
-                                   'plan ahead. The Leave policy guidelines '
-                                   'are applicable to all the full-time team '
-                                   'members of the company.\n'
-                                   '\n'
-                                   'Each team member is entitled to 8 casual '
-                                   'leaves, 8 sick leaves, 4 Mental Health '
-                                   'leave and 10 annual leaves in one calendar '
-                                   'year. Causal and annual leaves will be '
-                                   'available on a pro-rata basis. During '
-                                   'probation, only 3 leaves are allowed. '
-                                   'However, a team member will be eligible '
-                                   'for Annual Leaves after 3 months of '
-                                   'full-time service.\n'
-                                   '\n'
-                                   'Annual and casual leaves are pro-rata '
-                                   'basis. For casual, 8/12=0.67 per month and '
-                                   'for annual 10/12=0.83 per month.'
-Assistant:
-Employee leaves are beased on the Leave Policy Guide. 
-- each member is entitled to 8 casual, 8 sick and 4 mental health leaves.
-- each employee gets 10 annual leaves in a calendar year
-
-for detail on each type of leave, ask the question accordingly
 """
 
 #NLP-SQL Prompt
 # Set up system message prompts for different scenarios
 
-NLP_SQL = f""" You are a Database Expert where by you will be writing SQL queries from the given prompt. The examples of your tasks is as follows where you're the Database Expert and the user will be the Project Manager:\
-
-Project Manager: Obtain a high-level overview of the ongoing projects. Retrieve details such as project names, descriptions, status, and assignees.\
-
-Database Expert: Craft SQL queries to extract information from the columns id, name, description, current_status, and assignee. Ensure the responses are clear and concise for the Project Manager to quickly understand the project landscape.\
-
-Project Manager: Track the progress of selected projects. Retrieve information on dates (created, closed), time estimates, and time spent for effective project management.\
-
-Database Expert: Create SQL queries to extract details from columns date_created, date_closed, time_estimate, and time_spent. Provide insights into the temporal aspects of the projects for better tracking and analysis.\
-
-Project Manager: Focus on project assignments and due dates. Retrieve information about assignees, due dates, and identify any overdue tasks that require attention.\
-
-Database Expert: Construct SQL queries to fetch data from columns assignee, due_date, and current_status. Highlight any projects with approaching or overdue deadlines for the Project Manager to address promptly.\
-
-Project Manager: Explore collaboration within project teams. Retrieve data on team members, their roles, and collaborative efforts.\
-
-Database Expert: Formulate SQL queries to extract information from columns assignee, creator, and current_status. Analyze team dynamics and provide insights into how team members are contributing to project success.\
-
-Project Manager: Gain insights into client interactions and satisfaction. Retrieve data on client interactions, feedback, and project success metrics.\
-
-Database Expert: Create SQL queries to extract information from columns id, name, description, and client-related columns. Provide a comprehensive view of client interactions and satisfaction levels for the Project Manager's analysis.\
-
+NLP_SQL = f""" You are a Database Expert where by you will be writing SQL queries from the prompts the user enters.\
+ 
+Some examples of the situation are defined below\
+ 
+ 
+User:
+ 
+'ETL time taken in all space'\n
+                                   '\n'
+                                   'All spaces are consisting of different variables '
+                                   'including space_name, folder_name, time spent '
+                                   'as well as time estimate, assignee,creator, current status and name '
+                                   'As a Database expert I will query the database '
+                                   'and make the right call as to what is the answer.\n '
+                                   'I will query the the mentioned terms while '
+                                   'not mixing the answers.\n'
+                                   
+                                   
+                                   
+Assistant:
+SQLQuery:SELECT SUM(time_spent) FROM tasks WHERE name LIKE '%ETL%' AND space_name IS NOT NULL
+SQLResult: [(19.5,)]
+Final Answer: 19.5 hours
+ 
+User:
+ 
+'The previous answer is incomplete, see the schema again and redo the query'\n
+                                        '\n'
+                                        'All spaces are consisting of different variables '
+                                        'including space_name, folder_name, time spent '
+                                        'as well as time estimate, assignee,creator, current status and name '
+                                        'As a Database expert I will query the database '
+                                        'and make the right call as to what is the answer.\n '
+                                        'I will query the the mentioned terms while '
+                                        'not mixing the answers.\n'
+ 
+Assistant:
+SQLQuery:
+SQLResult:
+Final Answer:  
+               
+ 
 Your job is the give your response in bullet format and to always quote numerical values instead of using words to define a range of a given time period.
+ 
 
 """
 system_mes_temp = SystemMessagePromptTemplate.from_template(template= vec_db)
@@ -285,9 +290,11 @@ def input_classifier(input):
             st.session_state['token_usage'].append(response_token_usage)
         
         if response == 'T':
+            history = st.session_state.messages
             keywords = get_meeting_keywords(input)
             messages =  [{'role':'assistant', 'content': task_nomenclature_gen.format(meeting_keywords = keywords)},
                 {'role':'user', 'content': f'{delimiter}{input}{delimiter}'}]
+            messages.extend(history)
             response2, tokens_used = get_completion_from_messages1(messages, max_tokens=500)
             
             if response2 is not None:
@@ -303,14 +310,28 @@ def input_classifier(input):
             st.write('token_usage')
 
         elif response == 'C':
+            history = st.session_state.messages
             #conversation_string = get_conversation_string()
             #refined_query = query_refiner(conversation_string, query)
             #messages = [{'role':'system', 'content': vec_db},
                     #{'role':'user', 'content': input}]
             response_1 = find_match(input)
+            input_with_context = f"""
+            Prompt:
+            {vec_db}
+
+            Context:
+            {response_1}
+
+            Query:
+            {input}
+
+            History:
+            {history}
+            """
             #messages =  [{'role':'assistant', 'content': vec_db},
                # {'role':'user', 'content': response_1}]
-            response3 = conversation.predict(input = f"Context:\n {response_1} \n\n Query:\n{input}")
+            response3 = conversation.predict(input =input_with_context)
             print(response3)
             if response3 is not None:
                 st.session_state['responses'].append(response3)
