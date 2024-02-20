@@ -22,7 +22,7 @@ from streamlit_chat import message
 from langchain.embeddings import CacheBackedEmbeddings
 from langchain.storage import LocalFileStore
 from langchain.agents import create_sql_agent
-import pinecone
+from pinecone import Pinecone
 from dotenv import load_dotenv
 
 # App title
@@ -47,8 +47,8 @@ client2 = OpenAI(api_key=OPENAI_API_KEY)
 client3 = ChatOpenAI(model_name="gpt-3.5-turbo-16k", openai_api_key=OPENAI_API_KEY, temperature=0, max_tokens = 150)
 client4 = ChatOpenAI(model_name="gpt-3.5-turbo-16k", openai_api_key=OPENAI_API_KEY, temperature=0, max_tokens = 500)
 #llm = OpenAI(api_key=OPENAI_API_KEY, temperature=0, streaming=True)
-client = pinecone.init(api_key=PINECONE_API_KEY, environment=PINECONE_ENV)
-index = pinecone.Index('dp-index')
+client = Pinecone(api_key=PINECONE_API_KEY, environment=PINECONE_ENV)
+index = Pinecone.Index('dp-index')
 model = 'text-embedding-ada-002'
 openai.api_key = OPENAI_API_KEY
 
