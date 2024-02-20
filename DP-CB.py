@@ -48,7 +48,7 @@ client3 = ChatOpenAI(model_name="gpt-3.5-turbo-16k", openai_api_key=OPENAI_API_K
 client4 = ChatOpenAI(model_name="gpt-3.5-turbo-16k", openai_api_key=OPENAI_API_KEY, temperature=0, max_tokens = 500)
 #llm = OpenAI(api_key=OPENAI_API_KEY, temperature=0, streaming=True)
 client = Pinecone(api_key=PINECONE_API_KEY, environment=PINECONE_ENV)
-index = client.Index('dp-index')
+index = client.Index('dp-index', host = "https://dp-index-057db86.svc.gcp-starter.pinecone.io")
 model = 'text-embedding-ada-002'
 openai.api_key = OPENAI_API_KEY
 
