@@ -22,7 +22,7 @@ from streamlit_chat import message
 from langchain.embeddings import CacheBackedEmbeddings
 from langchain.storage import LocalFileStore
 from langchain.agents import create_sql_agent
-from pinecone import Pinecone
+import pinecone
 from dotenv import load_dotenv
 
 # App title
@@ -47,8 +47,8 @@ client2 = OpenAI(api_key=OPENAI_API_KEY)
 client3 = ChatOpenAI(model_name="gpt-3.5-turbo-16k", openai_api_key=OPENAI_API_KEY, temperature=0, max_tokens = 150)
 client4 = ChatOpenAI(model_name="gpt-3.5-turbo-16k", openai_api_key=OPENAI_API_KEY, temperature=0, max_tokens = 500)
 #llm = OpenAI(api_key=OPENAI_API_KEY, temperature=0, streaming=True)
-client = Pinecone(api_key=PINECONE_API_KEY, environment=PINECONE_ENV)
-index = client.Index(host = "https://dp-index-057db86.svc.gcp-starter.pinecone.io")
+client = pinecone.init(api_key=PINECONE_API_KEY, environment=PINECONE_ENV)
+index = pinecone.Index(host = "https://dp-index-057db86.svc.gcp-starter.pinecone.io")
 model = 'text-embedding-ada-002'
 openai.api_key = OPENAI_API_KEY
 
@@ -266,7 +266,7 @@ def get_sql_keywords(input):
 def find_match(input):
     try:
         xq = openai.embeddings.create(input=input, model=model).data[0].embedding
-        result = index.query(vector= [xq], top_k=5, include_metadata=True)
+        result = index.query([xq], top_k=5, include_metadata=True)
         print(result)
         return result['matches'][0]['metadata']['text']+result['matches'][1]['metadata']['text']
     
