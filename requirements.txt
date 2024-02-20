@@ -5,7 +5,7 @@ regex
 PyPDF2
 langchain==0.0.353
 pathlib
-pinecone-client
+pinecone-client==2.2.4
 python-dotenv
 langchain-experimental==0.0.47
 faiss-cpu
