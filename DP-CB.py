@@ -19,10 +19,12 @@ from langchain.chains.question_answering import load_qa_chain
 from langchain.chat_models import ChatOpenAI
 from langchain.callbacks import get_openai_callback
 from streamlit_chat import message
+from langchain.document_loaders import DirectoryLoader
 from langchain.embeddings import CacheBackedEmbeddings
+from langchain.chains import RetrievalQA
 from langchain.storage import LocalFileStore
 from langchain.agents import create_sql_agent
-from pinecone import Pinecone 
+#from pinecone import Pinecone 
 from dotenv import load_dotenv
 
 # App title
@@ -47,8 +49,8 @@ client2 = OpenAI(api_key=OPENAI_API_KEY)
 client3 = ChatOpenAI(model_name="gpt-3.5-turbo-16k", openai_api_key=OPENAI_API_KEY, temperature=0, max_tokens = 150)
 client4 = ChatOpenAI(model_name="gpt-3.5-turbo-16k", openai_api_key=OPENAI_API_KEY, temperature=0, max_tokens = 500)
 #llm = OpenAI(api_key=OPENAI_API_KEY, temperature=0, streaming=True)
-client =Pinecone(api_key=PINECONE_API_KEY, environment=PINECONE_ENV)
-index = client.Index(host = "https://dp-index-057db86.svc.gcp-starter.pinecone.io")
+# client =Pinecone(api_key=PINECONE_API_KEY, environment=PINECONE_ENV)
+# index = client.Index(host = "https://dp-index-057db86.svc.gcp-starter.pinecone.io")
 model = 'text-embedding-ada-002'
 openai.api_key = OPENAI_API_KEY
 
@@ -57,6 +59,23 @@ db_uri = f"sqlite:///{db_filepath}"
 
 if 'buffer_memory' not in st.session_state:
             st.session_state.buffer_memory=ConversationBufferWindowMemory(k=3,return_messages=True)
+
+    # Load document using PyPDFLoader document loader
+loader = DirectoryLoader("C:\\Users\\burki\\Documents\\Mac Transfer\\Data Pilot\\New Project\\Files", glob="**/*.pdf")
+loaders = [loader]
+documents = []
+for loader in loaders:
+        documents.extend(loader.load())
+    # Split document in chunks
+text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=30, separator="\n")
+docs = text_splitter.split_documents(documents=documents)
+print(len(docs))
+
+embeddings = OpenAIEmbeddings()
+    # Create vectors
+vectorstore = FAISS.from_documents(docs, embeddings)
+    # Persist the vectors locally on disk
+vectorstore.save_local("faiss_index_constitution")
 
 #prompts
 delimiter = '####'
@@ -211,6 +230,15 @@ def get_completion_from_messages1(messages, model='gpt-3.5-turbo-16k', temperatu
          #Handle the exception
          print(f"An error occured in get_completion_from_messages: {e}")
          return None, None
+    
+#function for vectorDB
+def query_pdf(input):
+    # Load from local storage
+    persisted_vectorstore = FAISS.load_local("faiss_index_constitution", embeddings)
+    # Use RetrievalQA chain for orchestration
+    qa = RetrievalQA.from_chain_type(llm=client4, chain_type="stuff", retriever=persisted_vectorstore.as_retriever())
+    result = qa.run(input)
+    return result
 
 def query_refiner(input):
     try:
@@ -263,18 +291,18 @@ def get_sql_keywords(input):
          return []
 #task_nomenclature_gen.format(meeting_keywords = keywords)
 #vectorDB
-def find_match(input):
-    try:
-        xq = openai.embeddings.create(input=input, model=model).data[0].embedding
-        print(xq)
-        result = index.query(vector=xq, top_k=5)
-        print(result)
-        return result['matches'][0]['metadata']['text']+result['matches'][1]['metadata']['text']
+# """ def find_match(input):
+#     try:
+#         xq = openai.embeddings.create(input=input, model=model).data[0].embedding
+#         print(xq)
+#         result = index.query([xq], top_k=5, include_metadata=True)
+#         print(result)
+#         return result['matches'][0]['metadata']['text']+result['matches'][1]['metadata']['text'] """
     
-    except Exception as e:
-         print(f"An error occurred in find_match function: {e}")
-         xq = openai.embeddings.create(input=input, model=model).data[0].embedding
-         print(xq)
+# """     except Exception as e:
+#          print(f"An error occurred in find_match function: {e}")
+#          xq = openai.embeddings.create(input=input, model=model).data[0].embedding
+#          print(xq) """
 
 #def has_meeting_keywords(input):
 
@@ -318,7 +346,7 @@ def input_classifier(input):
             #refined_query = query_refiner(conversation_string, query)
             #messages = [{'role':'system', 'content': vec_db},
                     #{'role':'user', 'content': input}]
-            response_1 = find_match(input)
+            response_1 = query_pdf(input)
             input_with_context = f"""
             Prompt:
             {vec_db}
