@@ -267,7 +267,7 @@ def find_match(input):
     try:
         xq = openai.embeddings.create(input=input, model=model).data[0].embedding
         print(xq)
-        result = index.query([xq], top_k=5, include_metadata=True)
+        result = index.query(vector=xq, top_k=5, include_metadata=True)
         print(result)
         return result['matches'][0]['metadata']['text']+result['matches'][1]['metadata']['text']
     
