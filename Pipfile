@@ -5,7 +5,21 @@ verify_ssl = true
 [dev-packages]
 
 [packages]
+streamlit
+pandas
+openai
+regex
+PyPDF2
+langchain = "==0.0.353"
+pathlib
+pinecone-client = "==2.2.4"
+python-dotenv
+langchain-experimental = "==0.0.47"
+faiss-cpu
+streamlit-chat
+tiktoken
+langchain_core = "==0.1.4"
 
 
 [requires]
-python_version = "3.11"
+python_version = "3.10.12"
