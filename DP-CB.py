@@ -59,9 +59,9 @@ db_uri = f"sqlite:///{db_filepath}"
 
 if 'buffer_memory' not in st.session_state:
             st.session_state.buffer_memory=ConversationBufferWindowMemory(k=3,return_messages=True)
-
+PDF_file_path = (Path(__file__).parent / "Files").absolute()
     # Load document using PyPDFLoader document loader
-loader = DirectoryLoader("C:\\Users\\burki\\Documents\\Mac Transfer\\Data Pilot\\New Project\\Files", glob="**/*.pdf")
+loader = DirectoryLoader(PDF_file_path, glob="**/*.pdf")
 loaders = [loader]
 documents = []
 for loader in loaders:
