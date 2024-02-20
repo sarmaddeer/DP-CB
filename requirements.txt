@@ -13,4 +13,3 @@ streamlit-chat
 tiktoken
 langchain_core==0.1.4
 unstructured==0.12.4
-unstrcutured[pdf]
